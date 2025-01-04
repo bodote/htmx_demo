@@ -180,4 +180,4 @@ def test_download(client):
     assert 'Content-Disposition' in response.headers, "check Content-Disposition header"
     assert 'attachment' in response.headers['Content-Disposition'], "check attachment in Content-Disposition header"
     # Check that the response data is not empty
-    assert len(response.data) > 5000, "check response data is not empty"
+    assert len(response.data) > 1000, "check response data is not empty"

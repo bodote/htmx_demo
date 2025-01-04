@@ -3,3 +3,4 @@ __pycache__
 .vscode
 my_flask_env
 tmp
+myenv

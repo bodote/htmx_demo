@@ -123,10 +123,10 @@ def archive():
 @app.route('/contacts/archive', methods=['GET'])
 def archive_get_progress():
     if os.path.exists(Archiver.file_path):
-        progress = int(os.path.getsize(Archiver.file_path)*100/5000 )
+        progress = int(os.path.getsize(Archiver.file_path)*100/4892 )
         logging.info(f"progress: {progress}")
         print(f"progress: {progress}")
-        if progress <=99:
+        if progress <=96:
             return render_template("archive-ui1.html",progress=progress)
         else:
             return render_template("archive-ui-ready.html")
@@ -140,4 +140,5 @@ def download():
     return Response(status=404)
 
 if __name__ == "__main__":
-     app.run(port=8080)
+    app.run(host='0.0.0.0', port=8080)
+    
