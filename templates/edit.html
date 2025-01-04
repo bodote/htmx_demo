@@ -1,0 +1,37 @@
+{% extends 'layout.html' %}
+
+{% block title %} 
+{{ title }} 
+{% endblock %}
+
+{% block content %}
+
+<form action="/contacts/{{ contact.id }}/edit" method="post">
+   <fieldset>
+    <legend>Edit Contact:</legend>
+    <label for="first">First name:</label>
+    <input type="text" id="first" name="first" value="{{ contact.first or '' }}">
+    <span class="error">
+        {{ contact.errors['first'] }} 
+    </span><br>
+    
+    <label for="last">Last name:</label>
+    <input type="text" id="last" name="last" value="{{ contact.last or '' }}">
+    <span class="error">
+        {{ contact.errors['last'] }} 
+    </span><br>
+
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" placeholder="Email" 
+    value="{{ contact.email or '' }}"
+    hx-get="/contacts/verify"
+    hx-target="next .error"
+    hx-trigger="change, keyup">
+    <span class="error">
+        {{ contact.errors['email'] }} 
+    </span><br>
+    <button>Save</button>
+    </fieldset>
+    <p><a href="/contacts">Back</a></p>
+</form>
+{% endblock %}

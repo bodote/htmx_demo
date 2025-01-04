@@ -1,0 +1,13 @@
+{
+  "body": {
+    "content": "",
+    "file": false,
+    "fileSize": false
+  },
+  "headers": {
+    "accept": "text/html"
+  },
+  "method": "GET",
+  "title": "GET contacts",
+  "url": "http://localhost:5000/contacts"
+}

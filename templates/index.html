@@ -1,0 +1,70 @@
+{% extends 'layout.html' %}
+
+{% block title %} 
+{{ title }} 
+{% endblock %}
+
+
+{% block content %}
+   
+    <h2>{{ title }}</h2>
+    <p>
+        <div  id="archive-ui" hx-target="this" hx-swap="outerHTML">
+            <button hx-post="/contacts/archive" >Download archive</button>
+        </div>
+    </p>
+    <p>
+        <form action="/contacts" method="get" class="tool-bar"> 
+            <label for="search">Search Term</label>
+            <input id="search" type="search" name="q"
+            hx-get="/contacts"
+            hx-trigger="search, keyup changed delay:200ms"
+            hx-target="tbody"
+            hx-push-url="true"
+            hx-indicator="#spinner"
+        value="{{ request.args.get('q') or '' }}" /> 
+        <img id="spinner" class="htmx-indicator"
+            src="/static/img/spinning-circles.svg"
+            alt="Request In Flight..."/> 
+            <input type="submit" value="Search"/>
+        </form>
+    </p>
+    <form>
+         <button hx-delete="/contacts" hx-confirm="Realy?"
+        hx-target="#tab_body">Delete Selected</button>
+    <table>
+        <thead>
+        <tr>
+             <th> </th>
+            <th>ID</th>
+            <th>First</th>
+            <th>Last</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Operations</th>
+        </tr>
+        </thead>
+        <tbody id="tab_body">
+            {% include 'table_rows.html' %}
+        </tbody>
+    </table>
+    </form>
+    <div><span style="float: right">
+        {% if page > 0 %}
+            <a href="/contacts?page={{ page -1  }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
+        {% endif %}
+        {% if (page +1)* 10 < (contact_list|length) %}
+            <a href="/contacts?page={{ page + 1 }}{% if query %}&q={{ query }}{% endif %}">Next</a>
+         {% endif %}
+    </span></div>
+
+   
+    <a href="/contacts/new">Add Contact</a>
+    <p>      
+        <div>
+            <span hx-get="/contacts/count" hx-trigger="revealed">
+                <img src="/static/img/spinning-circles.svg" alt="wait..." id="sprinner" class="htmx-indicator"/>
+            </span>
+        </div>
+    </p>
+{% endblock %}

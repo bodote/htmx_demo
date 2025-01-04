@@ -1,0 +1,33 @@
+    {% for message in get_flashed_messages() %}
+      <tr class="message_row" hx-get="/contacts/empty_row" hx-trigger="revealed" hx-swap="outerHTML swap:10s"> 
+        <td colspan="7">
+          <div class="flash">{{ message }}</div>
+        </td>
+      </tr>
+    {% endfor %}
+
+     {% for contact in contact_list[page * 10:(page + 1) * 10]  %} 
+        <tr class="normal_row">
+            <td><input type="checkbox" name="selected_row" value="{{ contact.id }}"/></td>
+            <td>{{ contact.id }}</td>
+            <td>{{ contact.first }}</td>
+            <td>{{ contact.last }}</td>
+            <td>{{ contact.email }}</td>
+            <td>{{ contact.phone }}</td>
+            <td><a href="/contacts/{{ contact.id }}/view">View</a> | <a href="/contacts/{{ contact.id }}/edit">Edit</a> | <a id="table-delete" href="#" hx-delete="/contacts/{{ contact.id }}" 
+            hx-swap="outerHTML swap:2s" hx-confirm="Are you sure?" hx-target="closest tr">Del</a>
+            </td>
+        </tr>
+    {% endfor %}
+    {% if (page +1)* 10 < (contact_list|length) %}
+        <tr>
+           <td colspan="3">
+                 <span id="more" hx-get="/contacts?page={{ page +1 }}{% if query %}&q={{ query }}{% endif %}"
+                    hx-trigger="revealed"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML">
+                    loading more...
+                </span>
+           </td> 
+        </tr>
+    {% endif %}
