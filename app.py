@@ -1,25 +1,62 @@
 import time,os,logging
-from flask import (
-    Flask, redirect, render_template, request, flash, Response, send_file
-)
+from flask import Flask, redirect, render_template, request, flash, Response, send_file,url_for, session
+
+from flask_dance.contrib.google import make_google_blueprint
+from flask_dance.contrib.github import make_github_blueprint
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
+import os
 from contacts_model import Contact
+from user_model import User
 from archiver import Archiver
 from typing import Self, Type, List, Optional
 from werkzeug.wrappers import Response as WrapperResponse
+from dotenv import load_dotenv
+
+# Load the .env file
+load_dotenv()
 
 
-app = Flask(__name__)
+
+app:Flask = Flask(__name__)
 app.secret_key = b'hypermedia rocks'
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+# Google OAuth
+google_blueprint = make_google_blueprint(
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    scope=["profile", "email"]
+)
+app.register_blueprint(google_blueprint, url_prefix="/google_login")
+
+# GitHub OAuth
+github_blueprint = make_github_blueprint(
+    client_id=os.environ.get('GITHUB_CLIENT_ID'),
+    client_secret=os.environ.get('GITHUB_CLIENT_SECRET'),
+    scope="user:email"
+)
+app.register_blueprint(github_blueprint, url_prefix="/github_login")
+
 Contact.load_db()
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(user_id)
 
 @app.before_request
 def simulate_low_bandwidth():
     time.sleep(0.01)  # Add delay to simulate slow network
 
-
 @app.route('/')
 def index() ->  WrapperResponse:
     return redirect("/contacts")
+
+
+@app.route('/login')
+def login() ->  str:
+    return render_template("login.html",title="Contacts")
 
 @app.route('/contacts')
 def contacts()-> str:
