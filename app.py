@@ -1,9 +1,9 @@
 import time,os,logging
 from flask import Flask, redirect, render_template, request, flash, Response, send_file,url_for, session
 
-from flask_dance.contrib.google import make_google_blueprint
-from flask_dance.contrib.github import make_github_blueprint
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
+from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.contrib.github import make_github_blueprint, github
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required,current_user
 import os
 from contacts_model import Contact
 from user_model import User
@@ -12,32 +12,52 @@ from typing import Self, Type, List, Optional
 from werkzeug.wrappers import Response as WrapperResponse
 from dotenv import load_dotenv
 
+
 # Load the .env file
 load_dotenv()
-
-
 
 app:Flask = Flask(__name__)
 app.secret_key = b'hypermedia rocks'
 
+# Create or get logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+# Create handler for console
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# Create formatter and add it to the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(console_handler)
 
 # Google OAuth
 google_blueprint = make_google_blueprint(
     client_id=os.environ.get('GOOGLE_CLIENT_ID'),
     client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
-    scope=["profile", "email"]
+    scope=["https://www.googleapis.com/auth/userinfo.email", "openid" , "https://www.googleapis.com/auth/userinfo.profile"],
+    redirect_to="google_callback",
 )
-app.register_blueprint(google_blueprint, url_prefix="/google_login")
+# see: https://console.cloud.google.com/apis/credentials "OAuth 2.0 Client IDs" -> contactApp Authorized redirect URIs 
+# = http://localhost:8080/login/google/authorized the "login" must be the same as the url_prefix below
+app.register_blueprint(google_blueprint, url_prefix="/login")
 
 # GitHub OAuth
-github_blueprint = make_github_blueprint(
-    client_id=os.environ.get('GITHUB_CLIENT_ID'),
-    client_secret=os.environ.get('GITHUB_CLIENT_SECRET'),
-    scope="user:email"
+github_bp = make_github_blueprint(
+    client_id=os.environ.get('GITHUB_CLIENT_ID'),  # Replace with your Client ID
+    client_secret=os.environ.get('GITHUB_CLIENT_SECRET'),  # Replace with your Client Secret
+    redirect_to="github_callback",
 )
-app.register_blueprint(github_blueprint, url_prefix="/github_login")
+# see https://github.com/settings/applications/1445491 Authorization callback URL
+# http://localhost:8080/login/github/authorized the "login" must be the same as the url_prefix below
+app.register_blueprint(github_bp, url_prefix="/login")
+
 
 Contact.load_db()
 
@@ -49,10 +69,47 @@ def load_user(user_id):
 def simulate_low_bandwidth():
     time.sleep(0.01)  # Add delay to simulate slow network
 
-@app.route('/')
-def index() ->  WrapperResponse:
-    return redirect("/contacts")
+@app.route("/")
+def index():
+    return render_template("login.html",title="Contacts")
 
+@app.route("/github_login")
+def github_login():
+    if not github.authorized:
+        return redirect(url_for("github.login"))
+    return redirect("/github_callback")
+
+@app.route("/google_login")
+def google_login():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+    return redirect("/google_callback")
+
+
+@app.route("/google_callback")
+def google_callback():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+    account_info = google_blueprint.session.get("/oauth2/v2/userinfo").json()
+    user = User(account_info['id'])
+    login_user(user)
+    logger.info(f"google_callback account_info {account_info}")
+    return redirect("/custom_callback")
+
+@app.route("/github_callback")
+def github_callback():
+    if not github.authorized:
+        return redirect(url_for("github.login"))
+    account_info = github_bp.session.get("/user").json()
+    user = User(account_info['id'])
+    login_user(user)
+    logger.info(f"github account_info {account_info}")
+    return redirect("/custom_callback")
+
+@app.route("/custom_callback")
+def custom_callback():
+    logger.info(f"custom_callback current_user.id  {current_user.id}")
+    return f"Hello custom_callback route!"
 
 @app.route('/login')
 def login() ->  str:
