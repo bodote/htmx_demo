@@ -4,15 +4,15 @@ from contacts_model import Contact
 class Archiver:
     file_path = 'tmp/archive.json'
 
-    def __init__(self):
+    def __init__(self)->None:
         self.isRunning = False
         self.progress = float(1.0)
         return
     @classmethod
-    def get(cls):
+    def get(cls)->'Archiver':
         return cls()
     
-    def run(self):
+    def run(self)->None:
         assert Contact.count() > 0
         if os.path.exists(self.file_path):
             os.remove(self.file_path)
@@ -21,7 +21,7 @@ class Archiver:
         thread.start()
         return
     
-    def write_to_file(self):
+    def write_to_file(self)->None:
         self.isRunning = True
         assert Contact.count() > 0
         with open(self.file_path, 'w') as archive_file:

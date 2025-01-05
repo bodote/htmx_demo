@@ -1,14 +1,15 @@
 import time,os,logging
-from flask import Flask, redirect, render_template, request, flash, Response, send_file,url_for, session
-
+from flask import Flask, redirect, render_template, request, flash, Response, send_file,url_for, session,Blueprint
 from flask_dance.contrib.google import make_google_blueprint, google
+# mypy: disable-error-code="import-untyped"
 from flask_dance.contrib.github import make_github_blueprint, github
+
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required,current_user
 import os
 from contacts_model import Contact
 from user_model import User
 from archiver import Archiver
-from typing import Self, Type, List, Optional
+from typing import Self, Type, List, Optional, cast,Any
 from werkzeug.wrappers import Response as WrapperResponse
 from dotenv import load_dotenv
 
@@ -56,38 +57,38 @@ github_bp = make_github_blueprint(
 )
 # see https://github.com/settings/applications/1445491 Authorization callback URL
 # http://localhost:8080/login/github/authorized the "login" must be the same as the url_prefix below
-app.register_blueprint(github_bp, url_prefix="/login")
+app.register_blueprint(cast(Blueprint,github_bp), url_prefix="/login")
 
 
 Contact.load_db()
 
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(user_id:str)-> User:
     return User(user_id)
 
 @app.before_request
-def simulate_low_bandwidth():
+def simulate_low_bandwidth()-> None:
     time.sleep(0.01)  # Add delay to simulate slow network
 
 @app.route("/")
-def index():
+def index()->WrapperResponse|str:
     return render_template("login.html",title="Contacts")
 
 @app.route("/github_login")
-def github_login():
+def github_login()->WrapperResponse|str:
     if not github.authorized:
         return redirect(url_for("github.login"))
     return redirect("/github_callback")
 
 @app.route("/google_login")
-def google_login():
+def google_login()->WrapperResponse|str:
     if not google.authorized:
         return redirect(url_for("google.login"))
     return redirect("/google_callback")
 
 
 @app.route("/google_callback")
-def google_callback():
+def google_callback()->WrapperResponse:
     if not google.authorized:
         return redirect(url_for("google.login"))
     account_info = google_blueprint.session.get("/oauth2/v2/userinfo").json()
@@ -97,17 +98,17 @@ def google_callback():
     return redirect("/custom_callback")
 
 @app.route("/github_callback")
-def github_callback():
+def github_callback()->WrapperResponse:
     if not github.authorized:
         return redirect(url_for("github.login"))
-    account_info = github_bp.session.get("/user").json()
+    account_info =  github_bp.session.get("/user").json()
     user = User(account_info['id'])
     login_user(user)
     logger.info(f"github account_info {account_info}")
     return redirect("/custom_callback")
 
 @app.route("/custom_callback")
-def custom_callback():
+def custom_callback()->str:
     logger.info(f"custom_callback current_user.id  {current_user.id}")
     return f"Hello custom_callback route!"
 
@@ -142,11 +143,11 @@ def new_contact_form()-> str:
 @app.route('/contacts/new',methods=['POST'])
 def new_contact()-> WrapperResponse:
     contact = Contact()
-    first_name = request.form.get('first',None)
+    first_name:str = request.form.get('first',"")
     contact.first=first_name
-    last_name = request.form.get('last',None)
+    last_name:str = request.form.get('last',"")
     contact.last=last_name
-    email = request.form.get('email',None) 
+    email:str = request.form.get('email',"") 
     contact.email=email
     if Contact.add_new(contact):
         return redirect("/contacts")
@@ -156,12 +157,12 @@ def new_contact()-> WrapperResponse:
        
 
 @app.route('/contacts/<contact_id>/view', methods=['GET'])
-def view_contact(contact_id=0)-> str:
+def view_contact(contact_id:int=0)-> WrapperResponse|str:
     contact = Contact.find(contact_id)
     return render_template("view.html",title="Contacts",contact=contact)
 
 @app.route('/contacts/<contact_id>/edit', methods=['GET'])
-def edit_contact(contact_id=0)-> str:
+def edit_contact(contact_id:int=0)-> str:
     contact = Contact.find(contact_id)
     return render_template("edit.html",title="Contacts",contact=contact)
 
@@ -174,7 +175,7 @@ def verify_email()-> str:
         return render_template("emailError.html",email_error="")
 
 @app.route('/contacts/<contact_id>/edit', methods=['POST'])
-def save_contact(contact_id=0)-> WrapperResponse:
+def save_contact(contact_id:int=0)-> WrapperResponse:
     contactOpt:Optional[Contact]
     if contactOpt := Contact.find(contact_id):
         contact = contactOpt
@@ -193,7 +194,7 @@ def save_contact(contact_id=0)-> WrapperResponse:
     return WrapperResponse(render_template("edit.html",title="Contacts",contact=contact))
 
 @app.route('/contacts/<contact_id>', methods=['DELETE'])
-def delete_contact(contact_id=0)-> WrapperResponse:
+def delete_contact(contact_id:int=0)-> WrapperResponse:
     Contact.delete(contact_id)
     flash("Delete was successful")
     if request.headers.get('HX-Trigger') == 'table-delete':

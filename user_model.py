@@ -1,3 +1,4 @@
+# mypy: disable-error-code="import-untyped"
 from flask_login import  UserMixin
 from typing import Self, Type, List, Optional,Any
 

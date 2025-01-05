@@ -10,13 +10,13 @@ class Contact:
     # mock contacts database
     db:dict = {}
 
-    def __init__(self, id_=None, first=None, last=None, phone=None, email=None):
+    def __init__(self, id_:str="", first:str="", last:str="", phone:str="", email:str="") -> None:
         self.id = id_
         self.first = first
         self.last = last
         self.phone = phone
         self.email = email
-        self.errors = {}
+        self.errors:dict = {}
     @staticmethod
     def is_valid_email(email: str) -> bool:
         # This regex pattern checks for a basic email format:
@@ -112,7 +112,7 @@ class Contact:
         return
     
     @classmethod
-    def count(cls: Type[Self]):
+    def count(cls: Type[Self])-> int:
         return len(cls.db.keys())
     
     def to_dict(self: Self) -> dict:
