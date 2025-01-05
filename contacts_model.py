@@ -1,4 +1,5 @@
 import json, copy, re
+from typing import Self, Type, List, Optional
 
 # ========================================================
 # Contact Model
@@ -7,7 +8,7 @@ PAGE_SIZE = 100
 
 class Contact:
     # mock contacts database
-    db = {}
+    db:dict = {}
 
     def __init__(self, id_=None, first=None, last=None, phone=None, email=None):
         self.id = id_
@@ -17,7 +18,7 @@ class Contact:
         self.email = email
         self.errors = {}
     @staticmethod
-    def is_valid_email(email):
+    def is_valid_email(email: str) -> bool:
         # This regex pattern checks for a basic email format:
         # - One or more characters for the local part (before @)
         # - @ symbol
@@ -30,7 +31,7 @@ class Contact:
         else: 
             return False
 
-    def validate(self):
+    def validate(self: Self) -> bool:
         if self.first is None or len(self.first.strip()) == 0 :
             self.errors['first']="First name must not be empty"
             return False
@@ -47,18 +48,18 @@ class Contact:
         return True
 
     @classmethod
-    def load_db(cls):
+    def load_db(cls: Type[Self]) -> None:
         with open('contacts.json', 'r') as contacts_file:
             contacts = json.load(contacts_file)
             cls.db.clear()
             for c in contacts:
                 cls.db[c['id']] = Contact(c['id'], c['first'], c['last'], c['phone'], c['email'])
     @classmethod
-    def all(cls):
+    def all(cls: Type[Self]) -> List[Self]:
         return list(cls.db.values())
     
     @classmethod
-    def search(cls,text):
+    def search(cls: Type[Self],text: str) -> List[Self]:
         result =[]
         for contact in cls.db.values():
             match_first = contact.first is not None and text in contact.first
@@ -69,8 +70,7 @@ class Contact:
         return result
     
     @classmethod
-    def findByEmail(cls,email):
-        result =[]
+    def findByEmail(cls: Type[Self],email: str) -> Optional[int]:
         for contact in cls.db.values():
             match_email = contact.email is not None and email is not None and contact.email.strip() == email.strip() 
             if  match_email:
@@ -78,7 +78,7 @@ class Contact:
         return None
     
     @classmethod
-    def add_new(cls,contact):
+    def add_new(cls: Type[Self],contact: Self ) -> bool:
         if not contact.validate():
             return False
         if cls.findByEmail(contact.email):
@@ -91,7 +91,7 @@ class Contact:
         return True
 
     @classmethod
-    def find(cls,contact_id):
+    def find(cls: Type[Self],contact_id: int) -> Optional[Self]:
         id = int(contact_id)
         if id in  cls.db:
             return copy.copy(cls.db[id])
@@ -99,7 +99,7 @@ class Contact:
             return None
     
     @classmethod
-    def save(cls,contact):
+    def save(cls: Type[Self],contact: Self) -> bool:
         if contact.validate():
             cls.db[int(contact.id)]=contact
             return True
@@ -107,15 +107,15 @@ class Contact:
             return False
 
     @classmethod
-    def delete(cls,contact_id):
+    def delete(cls: Type[Self],contact_id: int) -> None:
         del cls.db[int(contact_id)]
         return
     
     @classmethod
-    def count(cls):
+    def count(cls: Type[Self]):
         return len(cls.db.keys())
     
-    def to_dict(self):
+    def to_dict(self: Self) -> dict:
         return {
             'id': self.id,
             'first': self.first,

@@ -4,6 +4,9 @@ from flask import (
 )
 from contacts_model import Contact
 from archiver import Archiver
+from typing import Self, Type, List, Optional
+from werkzeug.wrappers import Response as WrapperResponse
+
 
 app = Flask(__name__)
 app.secret_key = b'hypermedia rocks'
@@ -15,11 +18,11 @@ def simulate_low_bandwidth():
 
 
 @app.route('/')
-def index():
+def index() ->  WrapperResponse:
     return redirect("/contacts")
 
 @app.route('/contacts')
-def contacts():
+def contacts()-> str:
     page = int(request.args.get("page") or 0)
 
     search = request.args.get("q") 
@@ -32,18 +35,18 @@ def contacts():
     return render_template("index.html",title="Contacts",contact_list=contact_set,page=page,query=search)
 
 @app.route('/contacts/count',methods=['GET'])
-def contact_count():
+def contact_count()-> WrapperResponse:
     time.sleep(0.01) 
     return Response(f"Total contacts: {Contact.count()}")
 
 
 @app.route('/contacts/new',methods=['GET'])
-def new_contact_form():
+def new_contact_form()-> str:
     new_contact= Contact()
     return render_template("new.html",title="Contacts",contact=new_contact)
 
 @app.route('/contacts/new',methods=['POST'])
-def new_contact():
+def new_contact()-> WrapperResponse:
     contact = Contact()
     first_name = request.form.get('first',None)
     contact.first=first_name
@@ -54,47 +57,49 @@ def new_contact():
     if Contact.add_new(contact):
         return redirect("/contacts")
     else:
-        return render_template("new.html",title="Contacts",contact=contact)
+        return WrapperResponse(render_template("new.html",title="Contacts",contact=contact))
         
        
 
 @app.route('/contacts/<contact_id>/view', methods=['GET'])
-def view_contact(contact_id=0):
+def view_contact(contact_id=0)-> str:
     contact = Contact.find(contact_id)
     return render_template("view.html",title="Contacts",contact=contact)
 
 @app.route('/contacts/<contact_id>/edit', methods=['GET'])
-def edit_contact(contact_id=0):
+def edit_contact(contact_id=0)-> str:
     contact = Contact.find(contact_id)
     return render_template("edit.html",title="Contacts",contact=contact)
 
 @app.route('/contacts/verify', methods=['GET'])
-def verify_email():
+def verify_email()-> str:
     email = request.args.get("email") 
-    if  not Contact.is_valid_email(email):
+    if email is None or  not Contact.is_valid_email(email):
         return render_template("emailError.html",email_error="not a valid email")
     else:
         return render_template("emailError.html",email_error="")
 
 @app.route('/contacts/<contact_id>/edit', methods=['POST'])
-def save_contact(contact_id=0):
-
-    contact = Contact.find(contact_id)
-    first_name = request.form.get('first',None)
-    contact.first=first_name
-    last_name = request.form.get('last',None)
-    contact.last=last_name
-    email = request.form.get('email',None) 
-    contact.email=email
-
-    if Contact.save(contact):
-        flash("Save was successful")
-        return redirect("/contacts")
-    else: 
-        return render_template("edit.html",title="Contacts",contact=contact)
+def save_contact(contact_id=0)-> WrapperResponse:
+    contactOpt:Optional[Contact]
+    if contactOpt := Contact.find(contact_id):
+        contact = contactOpt
+        first_name:Optional[str] 
+        if first_name:= request.form.get('first',None):
+            contact.first=first_name
+        last_name:Optional[str]
+        if last_name:= request.form.get('last',None):
+            contact.last=last_name        
+        email: Optional[str]
+        if email := request.form.get('email',None): 
+            contact.email=email
+        if Contact.save(contact):
+            flash("Save was successful")
+            return redirect("/contacts")
+    return WrapperResponse(render_template("edit.html",title="Contacts",contact=contact))
 
 @app.route('/contacts/<contact_id>', methods=['DELETE'])
-def delete_contact(contact_id=0):
+def delete_contact(contact_id=0)-> WrapperResponse:
     Contact.delete(contact_id)
     flash("Delete was successful")
     if request.headers.get('HX-Trigger') == 'table-delete':
@@ -102,7 +107,7 @@ def delete_contact(contact_id=0):
     return redirect("/contacts",303)
 
 @app.route('/contacts', methods=['DELETE'])
-def delete_marked_contacts():
+def delete_marked_contacts()-> str:
     selected_rows = [int(id) for id in request.form.getlist('selected_row') ]
     for id in selected_rows:
         Contact.delete(id)
@@ -111,17 +116,17 @@ def delete_marked_contacts():
     return render_template("table_rows.html",title="Contacts",contact_list=contact_set,page=0)
 
 @app.route('/contacts/empty_row', methods=['GET'])
-def empty_row():
+def empty_row()-> WrapperResponse:
     return Response(status=200)
 
 @app.route('/contacts/archive', methods=['POST'])
-def archive():
+def archive()-> str:
     archiver = Archiver.get()
     archiver.run()
     return render_template("archive-ui1.html",progress=0)
 
 @app.route('/contacts/archive', methods=['GET'])
-def archive_get_progress():
+def archive_get_progress()-> str:
     if os.path.exists(Archiver.file_path):
         progress = int(os.path.getsize(Archiver.file_path)*100/4892 )
         logging.info(f"progress: {progress}")
@@ -134,7 +139,7 @@ def archive_get_progress():
     return render_template("archive-ui1.html",progress=0)
 
 @app.route('/contacts/download', methods=['GET'])
-def download():
+def download()-> WrapperResponse:
     if os.path.exists(Archiver.file_path):
         return send_file(Archiver.file_path, "archive.json", as_attachment=True)
     return Response(status=404)
